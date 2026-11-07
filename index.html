@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HullPatch — STL Repair That Never Leaves Your Browser</title>
+<meta name="description" content="HullPatch fixes holes, inside walls, flipped faces and specks in your STL so it slices cleanly in Bambu Studio. The repair runs in your browser tab. Nothing is uploaded.">
+<meta property="og:title" content="HullPatch — STL repair in your browser">
+<meta property="og:description" content="Close holes, remove inside walls and turn flipped faces outward, then download a clean, watertight STL. Free, open source, and nothing is uploaded.">
+<meta property="og:image" content="https://hullpatch.townsville.cc/assets/icon-512.png">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#070a18">
+<link rel="icon" href="assets/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Michroma&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 28px; }
+
+  /* ---- Header ---- */
+  .site-header .wrap { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 24px; padding-bottom: 24px; }
+  .brand { display: flex; align-items: center; gap: 12px; color: var(--ink); font-family: var(--display); font-size: 14px; letter-spacing: .18em; }
+  .brand:hover { color: var(--ink); }
+  .brand img { width: 36px; height: 36px; border-radius: 9px; border: 1px solid rgba(76,201,255,.5); box-shadow: 0 0 18px rgba(76,201,255,.35); }
+  .brand .tv { color: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: .12em; }
+  .site-nav { display: flex; gap: 26px; flex-wrap: wrap; }
+  .site-nav a { font-family: var(--mono); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--body); }
+  .site-nav a:hover { color: var(--saber-blue); }
+
+  /* ---- Hero ---- */
+  .hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 48px; align-items: center; padding-top: 48px; padding-bottom: 88px; }
+  @media (min-width: 980px) { .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 520px); padding-top: 72px; } }
+  .hero-copy { container-type: inline-size; }
+  .kicker { font-family: var(--mono); font-size: 13px; letter-spacing: .22em; text-transform: uppercase; color: var(--saber-blue); }
+  .hero h1 { margin: 22px 0 18px; font-size: clamp(26px, 10.5cqi, 82px); line-height: 1; letter-spacing: .04em; white-space: nowrap;
+    background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold) 45%, var(--gold-dark) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .gold-rule { height: 2px; max-width: 520px; background: linear-gradient(90deg, var(--gold), transparent); }
+  .lead { margin-top: 22px; font-size: 20px; line-height: 1.55; color: var(--lead); max-width: 540px; }
+  .lead strong { color: var(--ink); font-weight: 600; }
+  .chips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; list-style: none; }
+  .chips li { font-family: var(--mono); font-size: 12px; padding: 6px 12px; border-radius: 999px; color: var(--saber-green);
+    border: 1px solid rgba(92,255,122,.4); background: rgba(92,255,122,.06); }
+  .cta-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 32px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 24px; border: 0; border-radius: 999px; cursor: pointer;
+    font-family: var(--text); font-weight: 600; font-size: 15px; color: #06101f; background: var(--saber-blue);
+    box-shadow: 0 0 24px rgba(76,201,255,.45); transition: filter .2s, box-shadow .2s; }
+  .btn:hover { color: #06101f; filter: brightness(1.12); box-shadow: 0 0 30px rgba(76,201,255,.6); }
+  .btn-ghost { background: transparent; color: var(--ink); border: 1px solid rgba(255,255,255,.22); box-shadow: none; }
+  .btn-ghost:hover { color: var(--ink); border-color: var(--saber-blue); box-shadow: 0 0 20px rgba(76,201,255,.25); filter: none; }
+
+  /* ---- Repair bay (a replay of a real repair, not an upload form) ---- */
+  .bay { position: relative; overflow: hidden; border-radius: 18px; padding: 22px;
+    background: linear-gradient(180deg, rgba(20,30,64,.78), rgba(10,14,32,.86)); border: 1px solid rgba(76,201,255,.28);
+    box-shadow: 0 0 0 1px rgba(76,201,255,.06) inset, 0 30px 80px rgba(0,0,0,.5), 0 0 60px rgba(76,201,255,.12); }
+  .bay::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(180deg, rgba(255,255,255,.025) 0 1px, transparent 1px 4px); }
+  .bay > * { position: relative; }
+  .bay-bar { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 11px; letter-spacing: .16em; color: var(--muted);
+    padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .bay-bar .on { display: inline-flex; align-items: center; gap: 8px; color: var(--saber-green); }
+  .bay-bar .on::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+  .log { padding: 14px 16px; border-radius: 12px; background: rgba(4,7,18,.75); border: 1px solid rgba(76,201,255,.25);
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.75; color: var(--body); min-height: 148px; overflow-wrap: anywhere; }
+  .log p::before { content: "> "; color: var(--saber-blue); }
+  .log .ok { color: var(--saber-green); }
+  .log .n { color: var(--ink); }
+  .log .bad { color: var(--saber-red); }
+  .log .cursor::after { content: ""; display: inline-block; width: 7px; height: 1em; margin-left: 4px; vertical-align: -2px; background: var(--saber-blue); animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .meter { height: 4px; margin-top: 12px; border-radius: 4px; background: rgba(255,255,255,.06); overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 0; background: var(--saber-blue); box-shadow: 0 0 10px var(--saber-blue); transition: width .5s linear; }
+  .readout { margin-top: 14px; border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
+  .readout table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .readout th, .readout td { padding: 8px 12px; text-align: left; border-bottom: 1px dashed var(--line); }
+  .readout tr:last-child td { border-bottom: 0; }
+  .readout th { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; font-weight: 400; color: var(--muted); }
+  .readout td:nth-child(n+2), .readout th:nth-child(n+2) { text-align: right; font-family: var(--mono); }
+  .readout .bad { color: var(--saber-red); }
+  .readout .ok { color: var(--saber-green); }
+  .bay-foot { margin-top: 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--muted); }
+
+  /* ---- Sections ---- */
+  .section { padding-top: 24px; padding-bottom: 72px; }
+  .section-head { display: flex; align-items: center; gap: 18px; margin-bottom: 36px; }
+  .section-head .label { font-family: var(--mono); font-size: 13px; letter-spacing: .2em; color: var(--saber-blue); }
+  .section-head h2 { font-size: clamp(20px, 3vw, 28px); letter-spacing: .06em; }
+  .section-head .rule { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,.18), transparent); }
+
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; list-style: none; counter-reset: s; }
+  .steps li { counter-increment: s; padding: 24px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+  .steps li::before { content: "0" counter(s); display: block; margin-bottom: 14px; font-family: var(--mono); font-size: 13px; letter-spacing: .18em; color: var(--gold); }
+  .steps h3 { font-size: 15px; letter-spacing: .06em; margin-bottom: 10px; }
+  .steps p { color: var(--body); font-size: 15.5px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; list-style: none; }
+  .card { position: relative; overflow: hidden; padding: 26px 24px 24px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+  .card .stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--s); box-shadow: 0 0 14px var(--s); }
+  .card h3 { font-size: 15px; letter-spacing: .08em; margin-bottom: 10px; color: var(--s); }
+  .card p { color: var(--body); font-size: 15.5px; }
+
+  .split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px; align-items: center; }
+  @media (min-width: 900px) { .split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; } }
+  .split h2 { font-size: clamp(22px, 3vw, 30px); letter-spacing: .05em; line-height: 1.25; margin-bottom: 18px; }
+  .split p { color: var(--lead); font-size: 17px; margin-bottom: 14px; max-width: 520px; }
+  .split ul { list-style: none; margin-top: 18px; display: grid; gap: 10px; }
+  .split li { color: var(--body); font-size: 15.5px; padding-left: 22px; position: relative; }
+  .split li::before { content: ""; position: absolute; left: 0; top: .55em; width: 8px; height: 8px; border-radius: 50%; background: var(--saber-green); box-shadow: 0 0 8px var(--saber-green); }
+  .split li b { color: var(--ink); font-weight: 600; }
+  .panel { padding: 24px; border-radius: 16px; background: rgba(4,7,18,.75); border: 1px solid rgba(76,201,255,.25); }
+  .panel .cap { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; color: var(--muted); margin-bottom: 14px; }
+  pre { font-family: var(--mono); font-size: 13px; line-height: 1.7; color: var(--ink); overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  pre .c { color: var(--muted); }
+  code { font-family: var(--mono); font-size: .9em; color: var(--ink); }
+  .legend { list-style: none; display: grid; gap: 12px; margin-top: 0 !important; }
+  .legend li { padding-left: 0 !important; display: flex; gap: 12px; align-items: center; font-size: 15px; }
+  .legend li::before { display: none; }
+  .legend i { flex: none; width: 14px; height: 14px; border-radius: 4px; background: var(--c); box-shadow: 0 0 10px var(--c); }
+  .legend b { font-weight: 600; color: var(--ink); }
+
+  .faq { display: grid; gap: 12px; max-width: 820px; }
+  details { border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+  summary { cursor: pointer; padding: 18px 22px; font-weight: 600; font-size: 16.5px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-family: var(--mono); color: var(--saber-blue); font-size: 20px; line-height: 1; }
+  details[open] summary::after { content: "−"; }
+  details p { padding: 0 22px 20px; color: var(--body); font-size: 15.5px; }
+
+  .final { text-align: center; padding: 56px 24px; border-radius: 22px; background: linear-gradient(180deg, rgba(20,30,64,.6), rgba(10,14,32,.7)); border: 1px solid rgba(232,195,106,.28); }
+  .final h2 { font-size: clamp(22px, 3.4vw, 34px); letter-spacing: .05em; margin-bottom: 14px; }
+  .final p { color: var(--lead); font-size: 17px; max-width: 520px; margin: 0 auto 26px; }
+  .final .cta-row { justify-content: center; margin-top: 0; }
+
+  .site-footer { border-top: 1px solid var(--line); padding: 28px 0 40px; margin-top: 24px; font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--muted); }
+  .site-footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .dotcc { color: var(--gold); }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="./" aria-label="HullPatch home">
+    <img src="assets/icon-512.png" width="36" height="36" alt="" aria-hidden="true">
+    HULLPATCH <span class="tv">/ townsville.cc</span>
+  </a>
+  <nav class="site-nav" aria-label="Sections">
+    <a href="#how">How it works</a>
+    <a href="#fixes">What it fixes</a>
+    <a href="#private">Privacy</a>
+    <a href="#selfhost">Self-host</a>
+    <a href="#faq">FAQ</a>
+  </nav>
+</div></header>
+
+<main>
+  <div class="wrap hero">
+    <div class="hero-copy">
+      <div class="kicker">STL repair · runs in your browser</div>
+      <h1>HULLPATCH</h1>
+      <div class="gold-rule"></div>
+      <p class="lead">Seal the leaks in your STL before the slicer finds them. <strong>Holes, inside walls, flipped faces and specks</strong> get fixed in your own browser tab, and the file never leaves your machine.</p>
+      <ul class="chips" aria-label="Highlights">
+        <li>● Bambu Studio ready</li>
+        <li>● No upload</li>
+        <li>● Free &amp; open source</li>
+      </ul>
+      <div class="cta-row">
+        <a class="btn" href="#selfhost">Run it yourself</a>
+        <a class="btn btn-ghost" href="https://github.com/hibikipr/hullpatch">View on GitHub</a>
+      </div>
+    </div>
+
+    <section class="bay" aria-label="A replay of a HullPatch repair">
+      <div class="bay-bar"><span>REPAIR BAY 01</span><span class="on">LOCAL · NO UPLOAD</span></div>
+      <div class="log" id="log" aria-live="off">
+        <p>torus.stl · <span class="n">0.2 MB</span></p>
+        <p>scanning…</p>
+        <p>scan: <span class="n">4,039</span> triangles · <span class="bad">263 problems</span></p>
+        <p>patching…</p>
+        <p>checking the result…</p>
+        <p><span class="ok">watertight</span> · <span class="n">4,100</span> triangles</p>
+      </div>
+      <div class="meter" aria-hidden="true"><i id="meter" style="width:100%"></i></div>
+      <div class="readout">
+        <table>
+          <thead><tr><th scope="col">CHECK</th><th scope="col">BEFORE</th><th scope="col">AFTER</th></tr></thead>
+          <tbody>
+            <tr><td>Open edges</td><td class="bad">177</td><td class="ok">0</td></tr>
+            <tr><td>Non-manifold edges</td><td>0</td><td class="ok">0</td></tr>
+            <tr><td>Flipped faces</td><td class="bad">86</td><td class="ok">0</td></tr>
+            <tr><td>Parts</td><td>2</td><td>1</td></tr>
+            <tr><td>Triangles</td><td>4,039</td><td>4,100</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="bay-foot">Replay of a real run on a test torus with deliberately broken faces.</p>
+    </section>
+  </div>
+
+  <section class="wrap section" id="how">
+    <div class="section-head"><span class="label">01</span><h2>THREE STEPS</h2><span class="rule"></span></div>
+    <ol class="steps">
+      <li><h3>DROP AN STL</h3><p>Binary or ASCII, up to 150 MB. The file is read from your disk straight into the page.</p></li>
+      <li><h3>WATCH IT PATCH</h3><p>A worker scans, repairs and re-checks the mesh off the main thread, with a live log of what it finds and fixes.</p></li>
+      <li><h3>DOWNLOAD A CLEAN SOLID</h3><p>HullPatch only says "watertight" once the fixed file has no open edges, non-manifold edges or flipped faces.</p></li>
+    </ol>
+  </section>
+
+  <section class="wrap section" id="fixes">
+    <div class="section-head"><span class="label">02</span><h2>WHAT GETS PATCHED</h2><span class="rule"></span></div>
+    <ul class="cards">
+      <li class="card" style="--s: var(--saber-blue)"><span class="stripe"></span><h3>HOLES</h3><p>Open edges are closed flat where they can be, and with a fan where they can't. Zero-width slivers are stitched into the neighbouring face.</p></li>
+      <li class="card" style="--s: var(--saber-red)"><span class="stripe"></span><h3>INSIDE WALLS</h3><p>Paper-thin walls left where parts were joined are taken out, so every edge is shared by exactly two faces.</p></li>
+      <li class="card" style="--s: var(--saber-teal)"><span class="stripe"></span><h3>FLIPPED FACES</h3><p>Faces are turned to point outward, and cavities inward, so the slicer knows what's solid.</p></li>
+      <li class="card" style="--s: var(--saber-purple)"><span class="stripe"></span><h3>SPECKS</h3><p>Flat or tiny loose bits that can't print are removed. The real parts are kept.</p></li>
+    </ul>
+  </section>
+
+  <section class="wrap section" id="see">
+    <div class="split">
+      <div>
+        <h2>SEE EXACTLY WHAT WAS WRONG</h2>
+        <p>The result opens in an interactive 3D view with a Before and After toggle. Every problem triangle in the Before view is coloured, and problems too small to spot get a marker.</p>
+        <ul>
+          <li><b>See inside</b> makes the healthy surface see-through, so walls hidden in the model show up.</li>
+          <li>Orbit, zoom, and jump to Top, Front and Side views.</li>
+          <li>The viewer is <a href="https://f3d.app" rel="noopener">F3D</a>'s WebAssembly build, loaded only once a repair starts.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="cap">BEFORE VIEW · COLOUR KEY</div>
+        <ul class="legend">
+          <li style="--c: var(--saber-red)"><i></i><span><b>Red</b> · open edge</span></li>
+          <li style="--c: #ffb02e"><i></i><span><b>Amber</b> · non-manifold edge or duplicate</span></li>
+          <li style="--c: var(--saber-purple)"><i></i><span><b>Purple</b> · flipped face</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" id="private">
+    <div class="split">
+      <div>
+        <h2>YOUR FILE STAYS YOUR FILE</h2>
+        <p>There is no server to upload to. The repair runs in a Web Worker in the tab and the 3D view runs in the page, so a model you haven't released never leaves your machine.</p>
+        <ul>
+          <li>No account, no analytics, no upload.</li>
+          <li>The repaired file is checked again before download.</li>
+          <li>Each repair stops after 4 minutes so your browser stays responsive.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="cap">THE REPAIR, IN SIX MOVES</div>
+        <pre><span class="c">1</span> Merge corners that sit in one place
+<span class="c">2</span> Drop degenerate and duplicate faces
+<span class="c">3</span> Make neighbours agree on winding
+<span class="c">4</span> Fill holes, stitching slivers
+<span class="c">5</span> Remove non-manifold faces, refill
+<span class="c">6</span> Clear specks under 1/1000 of the model</pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" id="selfhost">
+    <div class="split">
+      <div>
+        <h2>SELF-HOST IN ONE COMMAND</h2>
+        <p>HullPatch ships as a tiny container: non-root nginx serving static files. It needs no settings or volumes and runs fine read-only, because repairs happen in the visitor's browser.</p>
+        <p>Multi-arch images (amd64 and arm64) are published to GHCR on every push to <code>main</code>.</p>
+      </div>
+      <div class="panel">
+        <div class="cap">DOCKER</div>
+        <pre><span class="c"># then open http://localhost:8080</span>
+docker run -d --name hullpatch \
+  -p 8080:8080 \
+  ghcr.io/hibikipr/hullpatch:latest</pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" id="faq">
+    <div class="section-head"><span class="label">03</span><h2>FAQ</h2><span class="rule"></span></div>
+    <div class="faq">
+      <details><summary>Is my file uploaded anywhere?</summary><p>No. The repair runs in a worker inside the browser tab, and the 3D view runs in the page. Your STL is read from your disk and the fixed copy is handed straight back to you.</p></details>
+      <details><summary>Will it change the shape of my model?</summary><p>Only where it has to. Holes are closed with new faces, inside walls and duplicate faces are taken out, and loose bits that are flat or tiny are removed. The result is only kept when the model's volume stays the same.</p></details>
+      <details><summary>Does it work with Bambu Studio?</summary><p>That's what it's built for. After the repair, HullPatch checks the file for the three problems Bambu Studio reports: open edges, non-manifold edges and flipped faces.</p></details>
+      <details><summary>What if my file is too broken?</summary><p>Files up to 150 MB are accepted, and each repair stops after 4 minutes. If a repair is stopped or comes back partly repaired, the log says what is left so you know where to look.</p></details>
+      <details><summary>What does it cost?</summary><p>Nothing. HullPatch is free and open source, part of <a href="https://townsville.cc">townsville.cc</a>.</p></details>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <div class="final">
+      <h2>PATCH THE LEAKS, THEN SLICE</h2>
+      <p>Grab the container or read the source. Either way your models stay on your machine.</p>
+      <div class="cta-row">
+        <a class="btn" href="#selfhost">Run it yourself</a>
+        <a class="btn btn-ghost" href="https://github.com/hibikipr/hullpatch">View on GitHub</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer"><div class="wrap">
+  <span>HULLPATCH · part of <a href="https://townsville.cc">townsville<span class="dotcc">.cc</span></a></span>
+  <span>Your file never leaves your tab.</span>
+</div></footer>
+
+<script>
+// Replays the repair log. The full log is already in the markup, so without JS
+// (or with reduced motion) the finished state shows.
+(function () {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var log = document.getElementById('log'), meter = document.getElementById('meter');
+  var rows = Array.prototype.slice.call(log.children), pct = [8, 25, 45, 70, 90, 100];
+  function show(n) {
+    rows.forEach(function (p, i) { p.hidden = i >= n; p.classList.toggle('cursor', n < rows.length && i === n - 1); });
+    meter.style.width = pct[n - 1] + '%';
+  }
+  var step = 1;
+  function tick() {
+    show(step);
+    if (step < rows.length) { step++; setTimeout(tick, step === 4 ? 1200 : 750); }
+    else setTimeout(function () { step = 1; tick(); }, 5000);
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
